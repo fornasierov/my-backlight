@@ -11,3 +11,8 @@ python = "^3.12"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "ruff (==0.16.6)",
+    "pytest (==9.1.1)"
+]
