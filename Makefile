@@ -1,10 +1,12 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup config-init install-dev-suite install-system install-udev \
+.PHONY: help setup create-env install-poetry config-init install-dev-suite install-system install-udev \
 	uninstall-udev audit-udev check-access doctor activate-group test lint run purge
 
 help:
 	@echo "my-backlight commands:"
+	@echo "  make create-env     Create the 'my-backlight' Conda environment"
+	@echo "  make install-poetry Install Poetry if it is missing"
 	@echo "  make setup          Install Python dependencies and initialize config"
 	@echo "  make install-system Install the udev rule and device group"
 	@echo "  make activate-group Use the device group in a new shell now"
@@ -14,8 +16,33 @@ help:
 	@echo "  make lint           Run Ruff checks"
 	@echo "  make purge          Remove installed artifacts (destructive)"
 
+install-poetry:
+	@if command -v poetry >/dev/null 2>&1; then \
+		echo "Poetry is already installed."; \
+		exit 0; \
+	fi
+	@echo "Installing Poetry 2.4.1..."
+	@curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.4.1 python3 -
+	@echo "Poetry 2.4.1 installed successfully."
+
+create-env:
+	@command -v conda >/dev/null || { echo "Error: Conda is not installed." >&2; exit 1; }
+	@if conda env list | grep -Eq '^my-backlight[[:space:]]+'; then \
+		echo "Conda environment 'my-backlight' already exists."; \
+	else \
+		echo "Creating Conda environment 'my-backlight' with Python 3.12..."; \
+		conda create -n my-backlight python=3.12 -y; \
+	fi
+	@echo "Environment ready. Run 'conda activate my-backlight' and then 'make setup'."
+
 setup:
-	@command -v poetry >/dev/null || { echo "Error: Poetry is not installed." >&2; exit 1; }
+	@command -v conda >/dev/null || { echo "Error: Conda is not installed." >&2; exit 1; }
+	@if [ -z "$${CONDA_DEFAULT_ENV:-}" ] || [ "$${CONDA_DEFAULT_ENV}" != "my-backlight" ]; then \
+		echo "Error: the active Conda environment is '$${CONDA_DEFAULT_ENV:-none}'" >&2; \
+		echo "Run 'conda activate my-backlight' and try again." >&2; \
+		exit 1; \
+	fi
+	@command -v poetry >/dev/null || { echo "Error: Poetry is not installed. Run 'make install-poetry'." >&2; exit 1; }
 	poetry install --with dev
 	$(MAKE) config-init
 	@echo "Setup complete. Run 'make install-system' for device access."
