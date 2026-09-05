@@ -21,9 +21,10 @@ sudo usermod --append --groups "$GROUP_NAME" "$USER"
 sudo install -o root -g root -m 0644 "$RULE_SOURCE" "$RULE_TARGET"
 
 sudo udevadm control --reload-rules
-sudo udevadm trigger --subsystem-match=hidraw
+sudo udevadm trigger --action=change --subsystem-match=hidraw
+sudo udevadm settle
 
 echo
 echo "Installed: $RULE_TARGET"
 echo "User '$USER' was added to group '$GROUP_NAME'."
-echo "Start a new login session before using my-backlight."
+echo "Run 'make activate-group' now, or log out and back in."

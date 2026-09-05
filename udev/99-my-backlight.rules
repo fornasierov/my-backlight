@@ -1,3 +1,3 @@
 # Grants the my-backlight group access to the supported ASUS HID LampArray device.
-# HID ID: 0018:00000B05:000019B6
-SUBSYSTEM=="hidraw", ATTRS{HID_ID}=="0018:00000B05:000019B6", MODE="0660", GROUP="my-backlight"
+# HID parent: 0018:0B05:19B6 (HID ID 0018:00000B05:000019B6)
+SUBSYSTEM=="hidraw", KERNELS=="0018:0B05:19B6.*", MODE="0660", GROUP="my-backlight"

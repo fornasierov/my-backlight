@@ -29,7 +29,7 @@ def main():
         print(
             "Usage:\n"
             "  my-backlight status\n"
-            "  my-backlight set RRGGBB [percent]\n"
+            "  my-backlight set COLOR [percent]\n"
             "  my-backlight brightness 0-100\n"
             "  my-backlight off\n"
             "  my-backlight restore"

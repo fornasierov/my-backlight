@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .utils import clamp, hex_to_rgb, percent_to_intensity
+from .utils import clamp, hex_to_rgb, percent_to_intensity, resolve_color
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = Path(
@@ -43,8 +43,7 @@ class DefaultsConfig(YamlConfigModel):
     @field_validator("color")
     @classmethod
     def validate_color(cls, value: str) -> str:
-        r, g, b = hex_to_rgb(value)
-        return f"{r:02x}{g:02x}{b:02x}"
+        return resolve_color(value)
 
 
 class AppConfig(YamlConfigModel):
@@ -61,8 +60,7 @@ class RuntimeState(YamlConfigModel):
     @field_validator("color")
     @classmethod
     def validate_color(cls, value: str) -> str:
-        r, g, b = hex_to_rgb(value)
-        return f"{r:02x}{g:02x}{b:02x}"
+        return resolve_color(value)
 
 
 def load_app_config() -> AppConfig:

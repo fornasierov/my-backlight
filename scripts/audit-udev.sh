@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RULE_SOURCE="$ROOT_DIR/udev/99-my-backlight.rules"
 RULE_TARGET="/etc/udev/rules.d/99-my-backlight.rules"
-EXPECTED_HID_ID="0018:00000B05:000019B6"
+EXPECTED_HID_PARENT="0018:0B05:19B6.*"
 
 if [[ ! -f "$RULE_SOURCE" ]]; then
     echo "Error: source rule is missing: $RULE_SOURCE" >&2
@@ -24,7 +24,7 @@ if ! cmp --silent "$RULE_SOURCE" "$RULE_TARGET"; then
     exit 1
 fi
 
-grep -Fq "HID_ID==\"$EXPECTED_HID_ID\"" "$RULE_SOURCE"
+grep -Fq "KERNELS==\"$EXPECTED_HID_PARENT\"" "$RULE_SOURCE"
 grep -Fq 'MODE="0660"' "$RULE_SOURCE"
 grep -Fq 'GROUP="my-backlight"' "$RULE_SOURCE"
 

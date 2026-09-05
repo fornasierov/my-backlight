@@ -10,6 +10,6 @@ hid:
   firmware_byte: 0x01
 
 defaults:
-  color: "aa00ff"
+  color: "purple"
   percent: 100
   last_on_percent: 100

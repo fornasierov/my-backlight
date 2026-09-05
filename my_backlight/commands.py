@@ -1,6 +1,6 @@
 from .config import AppConfig, RuntimeState, get_saved_static_state, save_runtime_state
 from .hid import set_color, set_firmware_mode
-from .utils import clamp, debug, hex_to_rgb, percent_to_intensity
+from .utils import clamp, debug, hex_to_rgb, percent_to_intensity, resolve_color
 
 
 def cmd_status(config: AppConfig, state: RuntimeState, dev_path):
@@ -11,6 +11,7 @@ def cmd_status(config: AppConfig, state: RuntimeState, dev_path):
 
 
 def cmd_set(config: AppConfig, state: RuntimeState, dev_path, color, percent=None):
+    color = resolve_color(color)
     r, g, b = hex_to_rgb(color)
     percent = state.percent if percent is None else clamp(int(percent), 0, 100)
     intensity = percent_to_intensity(percent)
@@ -19,7 +20,7 @@ def cmd_set(config: AppConfig, state: RuntimeState, dev_path, color, percent=Non
     set_firmware_mode(config, dev_path, False)
     set_color(config, dev_path, r, g, b, intensity)
 
-    state.color = color.replace("#", "").lower()
+    state.color = color
     state.percent = percent
     if percent > 0:
         state.last_on_percent = percent
