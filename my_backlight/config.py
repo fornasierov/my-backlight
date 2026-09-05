@@ -10,33 +10,7 @@ def default_config():
         "color": "aa00ff",
         "percent": 100,
         "last_on_percent": 100,
-        "autonomous": False,
-        "profiles": {},
     }
-
-
-def normalize_profile(profile, defaults):
-    if not isinstance(profile, dict):
-        return None
-
-    normalized = {}
-
-    try:
-        r, g, b = hex_to_rgb(profile.get("color", defaults["color"]))
-        normalized["color"] = f"{r:02x}{g:02x}{b:02x}"
-    except SystemExit:
-        normalized["color"] = defaults["color"]
-
-    try:
-        normalized["percent"] = clamp(
-            int(profile.get("percent", defaults["percent"])), 0, 100
-        )
-    except (TypeError, ValueError):
-        normalized["percent"] = defaults["percent"]
-
-    normalized["autonomous"] = bool(profile.get("autonomous", defaults["autonomous"]))
-
-    return normalized
 
 
 def load_config():
@@ -66,8 +40,6 @@ def load_config():
     cfg.setdefault("color", defaults["color"])
     cfg.setdefault("percent", defaults["percent"])
     cfg.setdefault("last_on_percent", defaults["last_on_percent"])
-    cfg.setdefault("autonomous", defaults["autonomous"])
-    cfg.setdefault("profiles", defaults["profiles"])
 
     try:
         r, g, b = hex_to_rgb(cfg["color"])
@@ -84,20 +56,6 @@ def load_config():
         cfg["last_on_percent"] = clamp(int(cfg["last_on_percent"]), 0, 100)
     except (TypeError, ValueError):
         cfg["last_on_percent"] = defaults["last_on_percent"]
-
-    cfg["autonomous"] = bool(cfg["autonomous"])
-
-    if not isinstance(cfg["profiles"], dict):
-        cfg["profiles"] = {}
-    else:
-        normalized_profiles = {}
-        for name, profile in cfg["profiles"].items():
-            if not isinstance(name, str):
-                continue
-            normalized = normalize_profile(profile, defaults)
-            if normalized is not None:
-                normalized_profiles[name] = normalized
-        cfg["profiles"] = normalized_profiles
 
     return cfg
 

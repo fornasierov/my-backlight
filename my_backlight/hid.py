@@ -1,7 +1,13 @@
 import fcntl
 import os
 
-from .constants import FIRMWARE_BYTE, HIDIOCSFEATURE_BASE, HOST_BYTE
+from .constants import (
+    COLOR_REPORT_ID,
+    FIRMWARE_BYTE,
+    FIRMWARE_REPORT_ID,
+    HIDIOCSFEATURE_BASE,
+    HOST_BYTE,
+)
 from .utils import clamp, debug
 
 
@@ -22,16 +28,16 @@ def hid_set_feature(dev_path, report_id, payload_bytes):
         os.close(fd)
 
 
-def set_firmware_mode(devinfo, enabled: bool):
+def set_firmware_mode(dev_path, enabled: bool):
     debug(f"set_firmware_mode enabled={enabled}")
     hid_set_feature(
-        devinfo["path"],
-        devinfo["firmware_report_id"],
+        dev_path,
+        FIRMWARE_REPORT_ID,
         bytes([FIRMWARE_BYTE if enabled else HOST_BYTE]),
     )
 
 
-def set_color(devinfo, r, g, b, intensity):
+def set_color(dev_path, r, g, b, intensity):
     debug(f"set_color r={r} g={g} b={b} intensity={intensity}")
 
     payload = bytes(
@@ -48,4 +54,4 @@ def set_color(devinfo, r, g, b, intensity):
         ]
     )
 
-    hid_set_feature(devinfo["path"], devinfo["color_report_id"], payload)
+    hid_set_feature(dev_path, COLOR_REPORT_ID, payload)

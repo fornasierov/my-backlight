@@ -3,17 +3,17 @@ import sys
 DEBUG = False
 
 
-def debug(msg):
+def debug(msg: str) -> None:
     if DEBUG:
         print(f"[debug] {msg}")
 
 
-def die(msg, exit_code=1):
+def die(msg: str, exit_code=1):
     print(f"Error: {msg}", file=sys.stderr)
     sys.exit(exit_code)
 
 
-def clamp(n, lo, hi):
+def clamp(n: int, lo: int, hi: int):
     return max(lo, min(hi, n))
 
 
