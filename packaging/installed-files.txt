@@ -1,0 +1,4 @@
+/etc/udev/rules.d/99-my-backlight.rules
+/etc/modules-load.d/my-backlight.conf
+~/.config/my-backlight
+~/.config/autostart/my-backlight.desktop

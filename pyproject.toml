@@ -6,10 +6,11 @@ authors = ["fornav <vfornasiero@gmail.com>"]
 packages = [{include = "my_backlight"}]
 include = [
     { path = "configs/config.yaml", format = ["sdist", "wheel"] },
+    { path = "udev/99-my-backlight.rules", format = ["sdist", "wheel"] },
 ]
 
 [tool.poetry.scripts]
-vrgb = "my_backlight.cli:main"
+my-backlight = "my_backlight.cli:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"

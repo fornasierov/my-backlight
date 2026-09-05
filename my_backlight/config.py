@@ -8,7 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .utils import clamp, hex_to_rgb, percent_to_intensity
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-CONFIG_DIR = Path(os.environ.get("VRGB_CONFIG_DIR", PROJECT_ROOT / "configs"))
+CONFIG_DIR = Path(
+    os.environ.get(
+        "MY_BACKLIGHT_CONFIG_DIR",
+        Path.home() / ".config" / "my-backlight",
+    )
+)
 YAML_CONFIG_FILE = CONFIG_DIR / "config.yaml"
 STATE_FILE = CONFIG_DIR / "state.json"
 

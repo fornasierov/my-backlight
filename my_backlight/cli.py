@@ -28,11 +28,11 @@ def main():
     }:
         print(
             "Usage:\n"
-            "  vrgb status\n"
-            "  vrgb set RRGGBB [percent]\n"
-            "  vrgb brightness 0-100\n"
-            "  vrgb off\n"
-            "  vrgb restore"
+            "  my-backlight status\n"
+            "  my-backlight set RRGGBB [percent]\n"
+            "  my-backlight brightness 0-100\n"
+            "  my-backlight off\n"
+            "  my-backlight restore"
         )
         sys.exit(1)
 
@@ -62,5 +62,6 @@ if __name__ == "__main__":
         main()
     except PermissionError:
         utils.die(
-            "Permission denied to HID device. Run with sudo or install a udev rule."
+            "Permission denied to the HID device. Run `make install-udev`, "
+            "then start a new login session and use `make check-access`."
         )
