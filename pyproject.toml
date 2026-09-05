@@ -3,7 +3,10 @@ name = "my-backlight"
 version = "0.1.0"
 description = ""
 authors = ["fornav <vfornasiero@gmail.com>"]
-packages = [{include = "my-backlight"}]
+packages = [{include = "my_backlight"}]
+
+[tool.poetry.scripts]
+vrgb = "my_backlight.cli:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -19,4 +22,6 @@ dev = [
 
 [tool.ruff]
 line-length = 88
-docstring-style = "google"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
