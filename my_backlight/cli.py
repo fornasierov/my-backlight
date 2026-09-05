@@ -8,7 +8,7 @@ from .commands import (
     cmd_set,
     cmd_status,
 )
-from .config import load_config
+from .config import load_app_config, load_runtime_state
 from .devices import find_device
 
 
@@ -36,24 +36,25 @@ def main():
         )
         sys.exit(1)
 
-    cfg = load_config()
+    config = load_app_config()
+    state = load_runtime_state(config)
     command = args[0]
 
     if command == "status":
-        cmd_status(cfg, find_device())
+        cmd_status(config, state, find_device(config))
     elif command == "set":
         if len(args) < 2:
             utils.die("Missing color")
         percent = args[2] if len(args) > 2 else None
-        cmd_set(cfg, find_device(), args[1], percent)
+        cmd_set(config, state, find_device(config), args[1], percent)
     elif command == "brightness":
         if len(args) < 2:
             utils.die("Missing percent")
-        cmd_brightness(cfg, find_device(), args[1])
+        cmd_brightness(config, state, find_device(config), args[1])
     elif command == "off":
-        cmd_off(cfg, find_device())
+        cmd_off(config, state, find_device(config))
     elif command == "restore":
-        cmd_restore(cfg, find_device())
+        cmd_restore(config, state, find_device(config))
 
 
 if __name__ == "__main__":

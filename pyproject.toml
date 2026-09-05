@@ -4,12 +4,17 @@ version = "0.1.0"
 description = ""
 authors = ["fornav <vfornasiero@gmail.com>"]
 packages = [{include = "my_backlight"}]
+include = [
+    { path = "configs/config.yaml", format = ["sdist", "wheel"] },
+]
 
 [tool.poetry.scripts]
 vrgb = "my_backlight.cli:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+pydantic = "^2.0"
+pyyaml = "^6.0"
 
 [build-system]
 requires = ["poetry-core"]

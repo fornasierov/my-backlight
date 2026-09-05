@@ -1,80 +1,113 @@
 import json
-import sys
+import os
+from pathlib import Path
 
-from .constants import CONFIG_DIR, CONFIG_FILE
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from .utils import clamp, hex_to_rgb, percent_to_intensity
 
-
-def default_config():
-    return {
-        "color": "aa00ff",
-        "percent": 100,
-        "last_on_percent": 100,
-    }
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = Path(os.environ.get("VRGB_CONFIG_DIR", PROJECT_ROOT / "configs"))
+YAML_CONFIG_FILE = CONFIG_DIR / "config.yaml"
+STATE_FILE = CONFIG_DIR / "state.json"
 
 
-def load_config():
-    if not CONFIG_FILE.exists():
-        return default_config()
+class YamlConfigModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+
+class DeviceConfig(YamlConfigModel):
+    hid_id: str
+    firmware_report_id: int = Field(ge=0, le=255)
+    color_report_id: int = Field(ge=0, le=255)
+    required_kernel_module: str
+
+
+class HidConfig(YamlConfigModel):
+    ioctl_base: int
+    host_byte: int = Field(ge=0, le=255)
+    firmware_byte: int = Field(ge=0, le=255)
+
+
+class DefaultsConfig(YamlConfigModel):
+    color: str
+    percent: int = Field(ge=0, le=100)
+    last_on_percent: int = Field(ge=0, le=100)
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value: str) -> str:
+        r, g, b = hex_to_rgb(value)
+        return f"{r:02x}{g:02x}{b:02x}"
+
+
+class AppConfig(YamlConfigModel):
+    device: DeviceConfig
+    hid: HidConfig
+    defaults: DefaultsConfig
+
+
+class RuntimeState(YamlConfigModel):
+    color: str
+    percent: int = Field(ge=0, le=100)
+    last_on_percent: int = Field(ge=0, le=100)
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value: str) -> str:
+        r, g, b = hex_to_rgb(value)
+        return f"{r:02x}{g:02x}{b:02x}"
+
+
+def load_app_config() -> AppConfig:
+    try:
+        with YAML_CONFIG_FILE.open() as config_file:
+            raw_config = yaml.safe_load(config_file) or {}
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            f"Configuration file not found: {YAML_CONFIG_FILE}"
+        ) from error
+    except yaml.YAMLError as error:
+        raise RuntimeError(f"Invalid YAML configuration: {YAML_CONFIG_FILE}") from error
+
+    return AppConfig.model_validate(raw_config)
+
+
+def default_runtime_state(app_config: AppConfig) -> RuntimeState:
+    return RuntimeState(
+        color=app_config.defaults.color,
+        percent=app_config.defaults.percent,
+        last_on_percent=app_config.defaults.last_on_percent,
+    )
+
+
+def load_runtime_state(app_config: AppConfig) -> RuntimeState:
+    if not STATE_FILE.exists():
+        return default_runtime_state(app_config)
 
     try:
-        cfg = json.loads(CONFIG_FILE.read_text())
-    except json.JSONDecodeError:
-        backup = CONFIG_FILE.with_suffix(CONFIG_FILE.suffix + ".bad")
-        try:
-            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-            CONFIG_FILE.replace(backup)
-            print(
-                f"Warning: config file corrupted. Backed up to {backup} and using defaults.",
-                file=sys.stderr,
-            )
-        except OSError:
-            print(
-                "Warning: config file corrupted. Could not back it up; using defaults.",
-                file=sys.stderr,
-            )
-        return default_config()
-
-    defaults = default_config()
-
-    cfg.setdefault("color", defaults["color"])
-    cfg.setdefault("percent", defaults["percent"])
-    cfg.setdefault("last_on_percent", defaults["last_on_percent"])
-
-    try:
-        r, g, b = hex_to_rgb(cfg["color"])
-        cfg["color"] = f"{r:02x}{g:02x}{b:02x}"
-    except SystemExit:
-        cfg["color"] = defaults["color"]
-
-    try:
-        cfg["percent"] = clamp(int(cfg["percent"]), 0, 100)
-    except (TypeError, ValueError):
-        cfg["percent"] = defaults["percent"]
-
-    try:
-        cfg["last_on_percent"] = clamp(int(cfg["last_on_percent"]), 0, 100)
-    except (TypeError, ValueError):
-        cfg["last_on_percent"] = defaults["last_on_percent"]
-
-    return cfg
+        raw_state = json.loads(STATE_FILE.read_text())
+        return RuntimeState.model_validate(raw_state)
+    except (json.JSONDecodeError, ValueError):
+        return default_runtime_state(app_config)
 
 
-def save_config(cfg):
+def save_runtime_state(state: RuntimeState) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
+    STATE_FILE.write_text(state.model_dump_json(indent=2) + "\n")
 
 
-def get_saved_static_state(cfg):
-    r, g, b = hex_to_rgb(cfg["color"])
+def get_saved_static_state(state: RuntimeState):
+    r, g, b = hex_to_rgb(state.color)
 
-    p = int(cfg.get("percent", 100))
-    if p <= 0:
-        p = int(cfg.get("last_on_percent", 100))
-        if p <= 0:
-            p = 100
+    percent = state.percent
+    if percent <= 0:
+        percent = state.last_on_percent
+        if percent <= 0:
+            percent = 100
 
-    p = clamp(p, 0, 100)
-    intensity = percent_to_intensity(p)
+    percent = clamp(percent, 0, 100)
+    intensity = percent_to_intensity(percent)
 
-    return r, g, b, p, intensity
+    return r, g, b, percent, intensity

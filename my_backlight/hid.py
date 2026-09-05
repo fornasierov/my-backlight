@@ -1,21 +1,11 @@
 import fcntl
 import os
 
-from .constants import (
-    COLOR_REPORT_ID,
-    FIRMWARE_BYTE,
-    FIRMWARE_REPORT_ID,
-    HIDIOCSFEATURE_BASE,
-    HOST_BYTE,
-)
+from .config import AppConfig
 from .utils import clamp, debug
 
 
-def HIDIOCSFEATURE(length: int) -> int:
-    return HIDIOCSFEATURE_BASE | (length << 16)
-
-
-def hid_set_feature(dev_path, report_id, payload_bytes):
+def hid_set_feature(config: AppConfig, dev_path, report_id, payload_bytes):
     buf = bytes([report_id]) + payload_bytes
     debug(
         f"hid_set_feature dev={dev_path} report=0x{report_id:02X} "
@@ -23,21 +13,30 @@ def hid_set_feature(dev_path, report_id, payload_bytes):
     )
     fd = os.open(dev_path, os.O_RDWR | os.O_CLOEXEC)
     try:
-        fcntl.ioctl(fd, HIDIOCSFEATURE(len(buf)), buf)
+        fcntl.ioctl(
+            fd,
+            config.hid.ioctl_base | (len(buf) << 16),
+            buf,
+        )
     finally:
         os.close(fd)
 
 
-def set_firmware_mode(dev_path, enabled: bool):
+def set_firmware_mode(config: AppConfig, dev_path, enabled: bool):
     debug(f"set_firmware_mode enabled={enabled}")
     hid_set_feature(
+        config,
         dev_path,
-        FIRMWARE_REPORT_ID,
-        bytes([FIRMWARE_BYTE if enabled else HOST_BYTE]),
+        config.device.firmware_report_id,
+        bytes(
+            [
+                config.hid.firmware_byte if enabled else config.hid.host_byte,
+            ]
+        ),
     )
 
 
-def set_color(dev_path, r, g, b, intensity):
+def set_color(config: AppConfig, dev_path, r, g, b, intensity):
     debug(f"set_color r={r} g={g} b={b} intensity={intensity}")
 
     payload = bytes(
@@ -54,4 +53,4 @@ def set_color(dev_path, r, g, b, intensity):
         ]
     )
 
-    hid_set_feature(dev_path, COLOR_REPORT_ID, payload)
+    hid_set_feature(config, dev_path, config.device.color_report_id, payload)
