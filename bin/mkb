@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+# This is configured for my own laptop, if you want you can change this for your 
+# own device. Find the HID ID for it and test it
 HID_ID="${MKB_HID_ID:-0018:00000B05:000019B6}"
 REQUIRED_MODULE="${MKB_REQUIRED_MODULE:-asus-nb-wmi}"
 CONFIG_DIR="${MKB_CONFIG_DIR:-$HOME/.config/mkb}"

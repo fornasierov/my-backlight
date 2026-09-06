@@ -5,19 +5,17 @@ LIBEXECDIR ?= $(PREFIX)/libexec
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -O2
 
-.PHONY: help build install install-system install-udev uninstall uninstall-udev \
-	audit-udev check-access doctor activate-group test run purge
+.PHONY: help build install install-udev uninstall doctor activate-group test run
 
 help:
 	@echo "mkb commands:"
 	@echo "  make build          Build the HID helper"
 	@echo "  make install        Install mkb and the udev rule"
-	@echo "  make install-system Install only the udev rule and device group"
 	@echo "  make activate-group Use the device group in a new shell now"
 	@echo "  make doctor         Check local setup and device access"
 	@echo "  make run ARGS=...   Run mkb"
 	@echo "  make test           Run checks"
-	@echo "  make purge          Remove installed artifacts (destructive)"
+	@echo "  make uninstall      Remove installed artifacts (destructive)"
 
 build:
 	@mkdir -p build
@@ -29,23 +27,11 @@ install: build
 	$(MAKE) install-udev
 	@echo "Installed mkb and mkb-hid."
 
-uninstall:
-	sudo rm -f $(PREFIX)/bin/mkb $(LIBEXECDIR)/mkb-hid
-	$(MAKE) uninstall-udev
-
-install-system: install-udev
-
 install-udev:
 	./scripts/install-udev.sh
 
-uninstall-udev:
-	./scripts/uninstall-udev.sh
-
-audit-udev:
-	./scripts/audit-udev.sh
-
-check-access:
-	./scripts/check-access.sh
+uninstall:
+	./scripts/purge-my-backlight.sh
 
 doctor:
 	./scripts/doctor.sh
@@ -62,6 +48,3 @@ test: build
 run:
 	@if test -z "$(ARGS)"; then echo "Usage: make run ARGS=\"brightness 30\""; exit 2; fi
 	bin/mkb $(ARGS)
-
-purge:
-	./scripts/purge-my-backlight.sh

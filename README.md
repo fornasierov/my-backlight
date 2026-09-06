@@ -47,12 +47,11 @@ make test
 make run ARGS="set blue 80"
 ```
 
-Use `make audit-udev`, `make check-access`, and `make doctor` when diagnosing
-device permissions.
+Use `make doctor` when diagnosing the installation or device permissions.
 
 To remove installed files and the udev setup:
 
 ```fish
-DRY_RUN=1 make purge
-make purge
+DRY_RUN=1 make uninstall
+make uninstall
 ```
