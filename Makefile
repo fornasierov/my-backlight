@@ -5,7 +5,7 @@ LIBEXECDIR ?= $(PREFIX)/libexec
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -O2
 
-.PHONY: help build install setup install-system install-udev uninstall uninstall-udev \
+.PHONY: help build install install-system install-udev uninstall uninstall-udev \
 	audit-udev check-access doctor activate-group test run purge
 
 help:
@@ -28,8 +28,6 @@ install: build
 	sudo install -Dm755 build/mkb-hid $(LIBEXECDIR)/mkb-hid
 	$(MAKE) install-udev
 	@echo "Installed mkb and mkb-hid."
-
-setup: install
 
 uninstall:
 	sudo rm -f $(PREFIX)/bin/mkb $(LIBEXECDIR)/mkb-hid

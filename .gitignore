@@ -1,9 +1,5 @@
 /build/
 
-# Python
-__pycache__/
-*.py[cod]
-
 # Editor junk
 *.swp
 *.swo
@@ -19,6 +15,3 @@ __pycache__/
 
 # Logs
 *.log
-
-# Runtime state
-configs/state.json
