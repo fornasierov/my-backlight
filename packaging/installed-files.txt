@@ -1,4 +1,6 @@
 /etc/udev/rules.d/99-my-backlight.rules
 /etc/modules-load.d/my-backlight.conf
-~/.config/my-backlight
+/usr/local/bin/mkb
+/usr/local/libexec/mkb-hid
+~/.config/mkb
 ~/.config/autostart/my-backlight.desktop

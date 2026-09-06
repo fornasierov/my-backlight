@@ -1,62 +1,39 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup create-env install-poetry config-init install-dev-suite install-system install-udev \
-	uninstall-udev audit-udev check-access doctor activate-group test lint run purge
+PREFIX ?= /usr/local
+LIBEXECDIR ?= $(PREFIX)/libexec
+CC ?= cc
+CFLAGS ?= -std=c11 -Wall -Wextra -Werror -O2
+
+.PHONY: help build install setup install-system install-udev uninstall uninstall-udev \
+	audit-udev check-access doctor activate-group test run purge
 
 help:
-	@echo "my-backlight commands:"
-	@echo "  make create-env     Create the 'my-backlight' Conda environment"
-	@echo "  make install-poetry Install Poetry if it is missing"
-	@echo "  make setup          Install Python dependencies and initialize config"
-	@echo "  make install-system Install the udev rule and device group"
+	@echo "mkb commands:"
+	@echo "  make build          Build the HID helper"
+	@echo "  make install        Install mkb and the udev rule"
+	@echo "  make install-system Install only the udev rule and device group"
 	@echo "  make activate-group Use the device group in a new shell now"
 	@echo "  make doctor         Check local setup and device access"
-	@echo "  make run ARGS=...   Run my-backlight"
-	@echo "  make test           Run tests"
-	@echo "  make lint           Run Ruff checks"
+	@echo "  make run ARGS=...   Run mkb"
+	@echo "  make test           Run checks"
 	@echo "  make purge          Remove installed artifacts (destructive)"
 
-install-poetry:
-	@if command -v poetry >/dev/null 2>&1; then \
-		echo "Poetry is already installed."; \
-		exit 0; \
-	fi
-	@echo "Installing Poetry 2.4.1..."
-	@curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.4.1 python3 -
-	@echo "Poetry 2.4.1 installed successfully."
+build:
+	@mkdir -p build
+	$(CC) $(CFLAGS) src/mkb-hid.c -o build/mkb-hid
 
-create-env:
-	@command -v conda >/dev/null || { echo "Error: Conda is not installed." >&2; exit 1; }
-	@if conda env list | grep -Eq '^my-backlight[[:space:]]+'; then \
-		echo "Conda environment 'my-backlight' already exists."; \
-	else \
-		echo "Creating Conda environment 'my-backlight' with Python 3.12..."; \
-		conda create -n my-backlight python=3.12 -y; \
-	fi
-	@echo "Environment ready. Run 'conda activate my-backlight' and then 'make setup'."
+install: build
+	sudo install -Dm755 bin/mkb $(PREFIX)/bin/mkb
+	sudo install -Dm755 build/mkb-hid $(LIBEXECDIR)/mkb-hid
+	$(MAKE) install-udev
+	@echo "Installed mkb and mkb-hid."
 
-setup:
-	@command -v conda >/dev/null || { echo "Error: Conda is not installed." >&2; exit 1; }
-	@if [ -z "$${CONDA_DEFAULT_ENV:-}" ] || [ "$${CONDA_DEFAULT_ENV}" != "my-backlight" ]; then \
-		echo "Error: the active Conda environment is '$${CONDA_DEFAULT_ENV:-none}'" >&2; \
-		echo "Run 'conda activate my-backlight' and try again." >&2; \
-		exit 1; \
-	fi
-	@command -v poetry >/dev/null || { echo "Error: Poetry is not installed. Run 'make install-poetry'." >&2; exit 1; }
-	poetry install --with dev
-	$(MAKE) config-init
-	@echo "Setup complete. Run 'make install-system' for device access."
+setup: install
 
-config-init:
-	./scripts/init-config.sh
-
-install-dev-suite:
-	@echo "Installing Poetry 2.4.1..."
-	curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.4.1 python3 -
-	@echo "Poetry 2.4.1 installed successfully!"
-	@echo "Installing project and development dependencies..."
-	poetry install --with dev
-	@echo "Development dependencies installed successfully!"
+uninstall:
+	sudo rm -f $(PREFIX)/bin/mkb $(LIBEXECDIR)/mkb-hid
+	$(MAKE) uninstall-udev
 
 install-system: install-udev
 
@@ -77,29 +54,16 @@ doctor:
 
 activate-group:
 	@echo "Starting a shell with the 'my-backlight' group active."
-	@echo "After it starts, run 'conda activate my-backlight'."
 	@echo "Run 'exit' to return to the original shell."
 	newgrp my-backlight
 
-test:
-	poetry run pytest
-
-lint:
-	poetry run ruff check .
+test: build
+	bash -n bin/mkb scripts/*.sh
+	build/mkb-hid >/dev/null 2>&1; test $$? -eq 1
 
 run:
 	@if test -z "$(ARGS)"; then echo "Usage: make run ARGS=\"brightness 30\""; exit 2; fi
-	@if test -n "$${CONDA_DEFAULT_ENV:-}" && test "$${CONDA_DEFAULT_ENV}" != "my-backlight"; then \
-		echo "Error: the active Conda environment is '$${CONDA_DEFAULT_ENV}'." >&2; \
-		echo "Run 'conda activate my-backlight' and try again." >&2; \
-		exit 1; \
-	fi
-	@if test ! -f "$${MY_BACKLIGHT_CONFIG_DIR:-$$HOME/.config/my-backlight}/config.yaml"; then \
-		echo "Error: user configuration is missing." >&2; \
-		echo "Run 'make config-init' first." >&2; \
-		exit 1; \
-	fi
-	poetry run my-backlight $(ARGS)
+	bin/mkb $(ARGS)
 
 purge:
 	./scripts/purge-my-backlight.sh

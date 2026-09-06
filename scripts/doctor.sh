@@ -2,8 +2,7 @@
 
 set -u
 
-CONFIG_DIR="${MY_BACKLIGHT_CONFIG_DIR:-$HOME/.config/my-backlight}"
-CONFIG_FILE="$CONFIG_DIR/config.yaml"
+HELPER="${MKB_HID_HELPER:-/usr/local/libexec/mkb-hid}"
 RULE_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/udev/99-my-backlight.rules"
 RULE_TARGET="/etc/udev/rules.d/99-my-backlight.rules"
 GROUP_NAME="my-backlight"
@@ -22,11 +21,11 @@ check() {
 }
 
 echo "my-backlight doctor"
-command -v poetry >/dev/null 2>&1
-check "Poetry is installed" "$?"
+command -v mkb >/dev/null 2>&1
+check "mkb command is installed" "$?"
 
-[[ -f "$CONFIG_FILE" ]]
-check "Configuration exists ($CONFIG_FILE)" "$?"
+[[ -x "$HELPER" ]]
+check "HID helper is installed ($HELPER)" "$?"
 
 [[ -f "$RULE_TARGET" ]]
 check "udev rule is installed" "$?"
@@ -51,7 +50,7 @@ fi
 if [[ "$FAILED" != 0 ]]; then
     echo
     echo "Suggested fixes:"
-    [[ -f "$CONFIG_FILE" ]] || echo "  make config-init"
+    [[ -x "$HELPER" ]] || echo "  make install"
     [[ -f "$RULE_TARGET" ]] || echo "  make install-system"
     if ! id -nG | tr ' ' '\n' | grep -Fxq "$GROUP_NAME"; then
         echo "  make activate-group  # use the new group in a shell now"

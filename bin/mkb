@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+HID_ID="${MKB_HID_ID:-0018:00000B05:000019B6}"
+REQUIRED_MODULE="${MKB_REQUIRED_MODULE:-asus-nb-wmi}"
+CONFIG_DIR="${MKB_CONFIG_DIR:-$HOME/.config/mkb}"
+STATE_FILE="$CONFIG_DIR/state"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HELPER="${MKB_HID_HELPER:-/usr/local/libexec/mkb-hid}"
+
+if [[ -x "$SCRIPT_DIR/../build/mkb-hid" ]]; then
+    HELPER="$SCRIPT_DIR/../build/mkb-hid"
+fi
+
+error() {
+    printf 'Error: %s\n' "$1" >&2
+    exit 1
+}
+
+usage() {
+    cat <<'EOF'
+Usage:
+  mkb set COLOR [PERCENT]
+  mkb brightness PERCENT
+  mkb off
+  mkb restore
+  mkb status
+
+COLOR is a named color or six-digit RRGGBB value.
+PERCENT is an integer from 0 to 100.
+EOF
+}
+
+load_state() {
+    COLOR="aa00ff"
+    PERCENT=100
+    LAST_ON_PERCENT=100
+
+    if [[ -f "$STATE_FILE" ]]; then
+        while IFS='=' read -r key value; do
+            case "$key" in
+                COLOR) COLOR="$value" ;;
+                PERCENT) PERCENT="$value" ;;
+                LAST_ON_PERCENT) LAST_ON_PERCENT="$value" ;;
+            esac
+        done < "$STATE_FILE"
+    fi
+}
+
+save_state() {
+    mkdir -p "$CONFIG_DIR"
+    printf 'COLOR=%s\nPERCENT=%s\nLAST_ON_PERCENT=%s\n' \
+        "$COLOR" "$PERCENT" "$LAST_ON_PERCENT" > "$STATE_FILE"
+}
+
+resolve_color() {
+    local color="${1,,}"
+    case "$color" in
+        red) color=ff0000 ;;
+        orange) color=ff8000 ;;
+        yellow) color=ffff00 ;;
+        green) color=00ff00 ;;
+        blue) color=0000ff ;;
+        purple) color=aa00ff ;;
+        pink) color=ff69b4 ;;
+        brown) color=a52a2a ;;
+        black) color=000000 ;;
+        grey|gray) color=808080 ;;
+        white) color=ffffff ;;
+        \#*) color="${color#\#}" ;;
+    esac
+
+    [[ "$color" =~ ^[0-9a-f]{6}$ ]] || error "invalid color: $1"
+    printf '%s\n' "$color"
+}
+
+validate_percent() {
+    local percent="$1"
+    [[ "$percent" =~ ^[0-9]+$ ]] || error "brightness must be an integer from 0 to 100"
+    (( 10#$percent <= 100 )) || error "brightness must be an integer from 0 to 100"
+    printf '%d\n' "$((10#$percent))"
+}
+
+find_device() {
+    local sysfs hid_id device_name
+    for sysfs in /sys/class/hidraw/hidraw*/device/uevent; do
+        [[ -f "$sysfs" ]] || continue
+        hid_id="$(awk -F= '$1 == "HID_ID" { print $2; exit }' "$sysfs")"
+        if [[ "$hid_id" == "$HID_ID" ]]; then
+            [[ -d "/sys/module/${REQUIRED_MODULE//-/_}" ]] || \
+                error "required kernel module is missing: $REQUIRED_MODULE"
+            device_name="${sysfs#/sys/class/hidraw/}"
+            device_name="${device_name%%/*}"
+            printf '/dev/%s\n' "$device_name"
+            return
+        fi
+    done
+    error "supported HID device not found: $HID_ID"
+}
+
+apply_state() {
+    local color="$1" percent="$2"
+    local red=$((16#${color:0:2}))
+    local green=$((16#${color:2:2}))
+    local blue=$((16#${color:4:2}))
+    local intensity=$(( (percent * 255 + 50) / 100 ))
+    local device
+
+    [[ -x "$HELPER" ]] || error "HID helper is not installed: $HELPER"
+    device="$(find_device)"
+    "$HELPER" "$device" "$red" "$green" "$blue" "$intensity"
+}
+
+load_state
+
+if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+fi
+
+case "$1" in
+    set)
+        [[ $# -ge 2 && $# -le 3 ]] || error "usage: mkb set COLOR [PERCENT]"
+        COLOR="$(resolve_color "$2")"
+        if [[ $# -eq 3 ]]; then
+            PERCENT="$(validate_percent "$3")"
+        fi
+        (( PERCENT > 0 )) && LAST_ON_PERCENT="$PERCENT"
+        apply_state "$COLOR" "$PERCENT"
+        save_state
+        ;;
+    brightness)
+        [[ $# -eq 2 ]] || error "usage: mkb brightness PERCENT"
+        PERCENT="$(validate_percent "$2")"
+        (( PERCENT > 0 )) && LAST_ON_PERCENT="$PERCENT"
+        apply_state "$COLOR" "$PERCENT"
+        save_state
+        ;;
+    off)
+        [[ $# -eq 1 ]] || error "usage: mkb off"
+        (( PERCENT > 0 )) && LAST_ON_PERCENT="$PERCENT"
+        PERCENT=0
+        apply_state "$COLOR" "$PERCENT"
+        save_state
+        ;;
+    restore)
+        [[ $# -eq 1 ]] || error "usage: mkb restore"
+        (( LAST_ON_PERCENT > 0 )) || LAST_ON_PERCENT=100
+        PERCENT="$LAST_ON_PERCENT"
+        apply_state "$COLOR" "$PERCENT"
+        save_state
+        ;;
+    status)
+        [[ $# -eq 1 ]] || error "usage: mkb status"
+        printf 'Color: #%s\nBrightness: %s%%\n' "$COLOR" "$PERCENT"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 1
+        ;;
+esac

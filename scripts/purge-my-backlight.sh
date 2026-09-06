@@ -15,8 +15,8 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 if [[ "$DRY_RUN" != "1" ]]; then
-    echo "This removes installed my-backlight files, configuration, the udev rule, and group."
-    echo "It does not remove the source repository or the Conda environment."
+    echo "This removes installed mkb files, configuration, the udev rule, and group."
+    echo "It does not remove the source repository."
     read -r -p 'Type REMOVE to continue: ' confirmation
     [[ "$confirmation" == "REMOVE" ]] || { echo "Cancelled."; exit 0; }
 fi
@@ -69,4 +69,4 @@ if [[ -e "$RULE_TARGET" ]]; then
     exit 1
 fi
 
-echo "my-backlight purge complete."
+echo "mkb purge complete."
